@@ -1,6 +1,15 @@
 import { Button } from '@/components/ui/button';
 import { GetCurrentTabUrl } from '@/utils/chrome-tabs';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { Settings, ArrowLeft } from 'lucide-react';
+import { useSettingsStore } from '@/stores/settingsStore';
+import SettingsPage from '@/components/settings/SettingsPage';
+import ConfirmationModal from '@/components/settings/ConfirmationModal';
+
+/**
+ * 画面の表示状態を管理する型
+ */
+type ViewState = 'main' | 'settings';
 
 /**
  * Shobiシステム用ボタンコンポーネント
@@ -8,14 +17,27 @@ import { useState } from 'react';
  * @description
  * - 各環境（ローカル、ND、TEST、本番）へのアクセス用ボタンを提供
  * - 現在のタブのURLを取得し、環境別の処理を実行
- * - 共通のURL取得関数を使用してコードの重複を避ける
+ * - ローカル環境URLの設定機能（ローカルストレージ連携）
+ * - 設定画面への遷移とモーダル確認機能
  * - 実行結果をリアルタイムで画面に表示
  *
- * @returns {JSX.Element} ボタングループのJSX要素
+ * @returns {JSX.Element} ボタングループまたは設定画面のJSX要素
  */
 export default function ShobiButtons() {
+  // 画面表示状態の管理
+  const [currentView, setCurrentView] = useState<ViewState>('main');
   // 実行結果をリアルタイム表示するためのstate
   const [result, setResult] = useState<string>('ボタンをクリックしてください');
+  // 確認モーダルの表示状態
+  const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
+
+  // Zustandストアから設定値を取得
+  const { LocalUrl, LoadSettings } = useSettingsStore();
+
+  // 初期読み込み時に設定値を取得
+  useEffect(() => {
+    LoadSettings();
+  }, [LoadSettings]);
 
   /**
    * URL取得後の共通処理を行うコールバック関数
@@ -42,17 +64,22 @@ export default function ShobiButtons() {
         BaseUrl = 'www.shobi-u.ac.jp/';
         break;
       case 'ローカル':
-        BaseUrl = 'localhost/'; // ローカル用（念のため）
+        // ローカルストレージから取得したURLを使用
+        BaseUrl = LocalUrl ? `${LocalUrl}/` : 'localhost/';
         break;
       default:
         BaseUrl = 'unknown/';
         break;
     }
 
+    // 末尾スラッシュの正規化
+    const NormalizedBaseUrl = BaseUrl.endsWith('/') ? BaseUrl : `${BaseUrl}/`;
+
     // 最終的な表示URL（プロトコル付き）
-    const DisplayUrl = BaseUrl + ProcessedUrlPart;
-    // NDの場合はHTTP、その他はHTTPSを使用
-    const Protocol = ButtonType === 'ND' ? 'http' : 'https';
+    const DisplayUrl = NormalizedBaseUrl + ProcessedUrlPart;
+    // NDの場合はHTTP、その他はHTTPSを使用（ローカルはHTTP）
+    const Protocol =
+      ButtonType === 'ND' || ButtonType === 'ローカル' ? 'http' : 'https';
     const FullUrl = `${Protocol}://${DisplayUrl}`;
 
     // 新しいタブでURLを開く + クリップボードにコピー
@@ -73,6 +100,21 @@ export default function ShobiButtons() {
       );
       setResult(`❌ 処理に失敗しました: ${Protocol}://${DisplayUrl}`);
     }
+  };
+
+  /**
+   * ローカルボタンクリック時の特別な処理
+   */
+  const HandleLocalButtonClick = async (): Promise<void> => {
+    // ローカルURLが設定されているかチェック
+    if (!LocalUrl || LocalUrl.trim() === '') {
+      // 未設定の場合、確認モーダルを表示
+      setIsConfirmationModalOpen(true);
+      return;
+    }
+
+    // 設定済みの場合、通常の処理を実行
+    await HandleButtonClick('ローカル');
   };
 
   /**
@@ -111,13 +153,55 @@ export default function ShobiButtons() {
     }
   };
 
+  /**
+   * 設定ページへの遷移
+   */
+  const HandleSettingsClick = () => {
+    setCurrentView('settings');
+  };
+
+  /**
+   * メイン画面に戻る
+   */
+  const HandleBackToMain = () => {
+    setCurrentView('main');
+  };
+
+  /**
+   * 確認モーダルで「はい」をクリックした時の処理
+   */
+  const HandleConfirmLocalSetup = () => {
+    setCurrentView('settings');
+  };
+
+  /**
+   * 確認モーダルを閉じる
+   */
+  const HandleCloseConfirmationModal = () => {
+    setIsConfirmationModalOpen(false);
+  };
+
+  // 設定画面を表示
+  if (currentView === 'settings') {
+    return <SettingsPage OnBack={HandleBackToMain} />;
+  }
+
+  // メイン画面を表示
   return (
     <>
-      <div className='grid grid-cols-2 gap-2 mt-2'>
+      <div className='flex items-center justify-between mb-4'>
+        <h1 className='text-lg font-semibold'>shobi-u</h1>
         <Button
-          variant='outline'
-          disabled
-          onClick={() => HandleButtonClick('ローカル')}>
+          variant='ghost'
+          size='sm'
+          onClick={HandleSettingsClick}
+          className='p-2'>
+          <Settings className='h-4 w-4' />
+        </Button>
+      </div>
+
+      <div className='grid grid-cols-2 gap-2 mt-2'>
+        <Button variant='outline' onClick={HandleLocalButtonClick}>
           ローカル
         </Button>
         <Button variant='outline' onClick={() => HandleButtonClick('ND')}>
@@ -130,11 +214,23 @@ export default function ShobiButtons() {
           本番
         </Button>
       </div>
+
       <div className='mt-4 p-3 bg-gray-50 border rounded-md'>
         <pre className='text-xs whitespace-pre-wrap font-mono text-gray-700'>
           {result}
         </pre>
       </div>
+
+      {/* 確認モーダル */}
+      <ConfirmationModal
+        IsOpen={isConfirmationModalOpen}
+        OnClose={HandleCloseConfirmationModal}
+        OnConfirm={HandleConfirmLocalSetup}
+        Title='ローカル環境URL未設定'
+        Description='ローカル環境のURLが設定されていません。設定画面に移動して設定しますか？'
+        ConfirmButtonText='設定画面へ'
+        CancelButtonText='キャンセル'
+      />
     </>
   );
 }

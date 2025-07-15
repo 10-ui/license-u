@@ -9,6 +9,6 @@ export default defineConfig({
     plugins: [tailwindcss()],
   }),
   manifest: {
-    permissions: ['tabs', 'activeTab'],
+    permissions: ['tabs', 'activeTab', 'storage'],
   },
 });
