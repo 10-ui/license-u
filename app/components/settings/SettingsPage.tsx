@@ -1,4 +1,3 @@
-import { ArrowLeft } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -131,20 +130,7 @@ export default function SettingsPage({ OnBack }: SettingsPageProps) {
   };
 
   return (
-    <div className='w-full max-w-md mx-auto p-4'>
-      {/* ヘッダー */}
-      <div className='flex items-center mb-6'>
-        <Button
-          variant='ghost'
-          size='sm'
-          onClick={OnBack}
-          className='mr-2 p-2'
-        >
-          <ArrowLeft className='h-4 w-4' />
-        </Button>
-        <h1 className='text-lg font-semibold'>設定</h1>
-      </div>
-
+    <div className='w-full max-w-md mx-auto'>
       {/* 環境設定セクション */}
       <div className='space-y-6'>
         <div>

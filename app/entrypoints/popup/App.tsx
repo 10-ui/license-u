@@ -1,19 +1,20 @@
-import { useState } from 'react';
-import Header from '@/components/common/header';
-import ShobiButtons from '@/components/common/shobibuttons';
+import AppContainer from '@/components/AppContainer';
 
+/**
+ * ポップアップアプリケーションのメインコンポーネント
+ * 
+ * @description
+ * - Chrome拡張機能のポップアップ画面
+ * - AppContainerに全体の処理を委譲
+ * - 責務が明確に分離された構造
+ * 
+ * @returns {JSX.Element} アプリケーション全体のJSX要素
+ */
 function App() {
-  const [count, setCount] = useState(0);
-
   return (
-    <>
-      <Header />
-      <main className='p-4'>
-        <h2 className='text-xl font-bold'>shobi-u</h2>
-
-        <ShobiButtons />
-      </main>
-    </>
+    <main className='w-full p-4'>
+      <AppContainer />
+    </main>
   );
 }
 
