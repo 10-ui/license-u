@@ -10,5 +10,6 @@ export default defineConfig({
   }),
   manifest: {
     permissions: ['tabs', 'activeTab', 'storage'],
+    host_permissions: ['<all_urls>'], // File System Access API用
   },
 });

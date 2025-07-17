@@ -1,11 +1,20 @@
 import { create } from 'zustand';
 
 /**
+ * エディタの種類
+ */
+type EditorType = 'vscode' | 'cursor' | 'dreamweaver';
+
+/**
  * 設定データの型定義
  */
 interface SettingsData {
   /** ローカル環境のURL */
   LocalUrl: string;
+  /** プロジェクトベースパス */
+  ProjectBasePath: string;
+  /** 使用エディタ */
+  PreferredEditor: EditorType;
 }
 
 /**
@@ -14,6 +23,10 @@ interface SettingsData {
 interface SettingsState {
   /** ローカル環境のURL */
   LocalUrl: string;
+  /** プロジェクトベースパス */
+  ProjectBasePath: string;
+  /** 使用エディタ */
+  PreferredEditor: EditorType;
   /** 設定の読み込み状態 */
   IsLoading: boolean;
   /** エラーメッセージ */
@@ -21,10 +34,20 @@ interface SettingsState {
 
   /** ローカルURLを設定 */
   SetLocalUrl: (url: string) => void;
+  /** プロジェクトベースパスを設定 */
+  SetProjectBasePath: (path: string) => void;
+  /** 使用エディタを設定 */
+  SetPreferredEditor: (editor: EditorType) => void;
   /** Chrome Storageから設定を読み込み */
   LoadSettings: () => Promise<void>;
   /** Chrome Storageに設定を保存 */
   SaveSettings: () => Promise<void>;
+  /** ローカルURLのみ保存 */
+  SaveLocalUrl: () => Promise<void>;
+  /** プロジェクトベースパスのみ保存 */
+  SaveProjectBasePath: () => Promise<void>;
+  /** 使用エディタのみ保存 */
+  SavePreferredEditor: () => Promise<void>;
   /** エラーをクリア */
   ClearError: () => void;
 }
@@ -40,6 +63,8 @@ interface SettingsState {
  */
 export const useSettingsStore = create<SettingsState>((set, get) => ({
   LocalUrl: '',
+  ProjectBasePath: '',
+  PreferredEditor: 'vscode',
   IsLoading: false,
   ErrorMessage: null,
 
@@ -47,14 +72,28 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     set({ LocalUrl: url });
   },
 
+  SetProjectBasePath: (path: string) => {
+    set({ ProjectBasePath: path });
+  },
+
+  SetPreferredEditor: (editor: EditorType) => {
+    set({ PreferredEditor: editor });
+  },
+
   LoadSettings: async () => {
     try {
       set({ IsLoading: true, ErrorMessage: null });
 
-      const result = await chrome.storage.local.get(['LocalUrl']);
+      const result = await chrome.storage.local.get([
+        'LocalUrl',
+        'ProjectBasePath',
+        'PreferredEditor',
+      ]);
 
       set({
         LocalUrl: result.LocalUrl || '',
+        ProjectBasePath: result.ProjectBasePath || '',
+        PreferredEditor: result.PreferredEditor || 'vscode',
         IsLoading: false,
       });
     } catch (CaughtError) {
@@ -76,8 +115,12 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     try {
       set({ IsLoading: true, ErrorMessage: null });
 
-      const { LocalUrl } = get();
-      const settingsData: SettingsData = { LocalUrl };
+      const { LocalUrl, ProjectBasePath, PreferredEditor } = get();
+      const settingsData: SettingsData = {
+        LocalUrl,
+        ProjectBasePath,
+        PreferredEditor,
+      };
 
       await chrome.storage.local.set(settingsData);
 
@@ -104,6 +147,72 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
 
       set({
         ErrorMessage: UserErrorMessage,
+        IsLoading: false,
+      });
+    }
+  },
+
+  SaveLocalUrl: async () => {
+    try {
+      set({ IsLoading: true, ErrorMessage: null });
+
+      const { LocalUrl } = get();
+      await chrome.storage.local.set({ LocalUrl });
+
+      set({ IsLoading: false });
+    } catch (CaughtError) {
+      const ErrorMessage = `[SaveLocalUrl] ローカルURLの保存でエラーが発生しました: ${
+        CaughtError instanceof Error ? CaughtError.message : String(CaughtError)
+      }`;
+
+      console.error(ErrorMessage, CaughtError);
+
+      set({
+        ErrorMessage: 'ローカルURLの保存に失敗しました。',
+        IsLoading: false,
+      });
+    }
+  },
+
+  SaveProjectBasePath: async () => {
+    try {
+      set({ IsLoading: true, ErrorMessage: null });
+
+      const { ProjectBasePath } = get();
+      await chrome.storage.local.set({ ProjectBasePath });
+
+      set({ IsLoading: false });
+    } catch (CaughtError) {
+      const ErrorMessage = `[SaveProjectBasePath] プロジェクトベースパスの保存でエラーが発生しました: ${
+        CaughtError instanceof Error ? CaughtError.message : String(CaughtError)
+      }`;
+
+      console.error(ErrorMessage, CaughtError);
+
+      set({
+        ErrorMessage: 'プロジェクトベースパスの保存に失敗しました。',
+        IsLoading: false,
+      });
+    }
+  },
+
+  SavePreferredEditor: async () => {
+    try {
+      set({ IsLoading: true, ErrorMessage: null });
+
+      const { PreferredEditor } = get();
+      await chrome.storage.local.set({ PreferredEditor });
+
+      set({ IsLoading: false });
+    } catch (CaughtError) {
+      const ErrorMessage = `[SavePreferredEditor] 使用エディタの保存でエラーが発生しました: ${
+        CaughtError instanceof Error ? CaughtError.message : String(CaughtError)
+      }`;
+
+      console.error(ErrorMessage, CaughtError);
+
+      set({
+        ErrorMessage: '使用エディタの保存に失敗しました。',
         IsLoading: false,
       });
     }

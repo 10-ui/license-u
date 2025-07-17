@@ -14,7 +14,7 @@ function App() {
   return (
     <main className='w-full p-4'>
       <AppContainer />
-    </main>
+      </main>
   );
 }
 

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSettingsStore } from '@/stores/settingsStore';
 import Header from '@/components/common/Header';
 import ShobiButtons from '@/components/common/ShobiButtons';
+import FileSection from '@/components/common/FileSection';
 import ResultDisplay from '@/components/common/ResultDisplay';
 import SettingsPage from '@/components/settings/SettingsPage';
 import ConfirmationModal from '@/components/settings/ConfirmationModal';
@@ -109,6 +110,8 @@ export default function AppContainer() {
         OnResultUpdate={HandleResultUpdate}
         OnLocalUrlNotSet={HandleLocalUrlNotSet}
       />
+
+      <FileSection OnResultUpdate={HandleResultUpdate} />
 
       <ResultDisplay Message={result} />
 

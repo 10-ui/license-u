@@ -145,21 +145,21 @@ export default function ShobiButtons({
 
   return (
     <div className='grid grid-cols-2 gap-2 mt-2'>
-      <Button
+        <Button
         variant='outline'
         onClick={HandleLocalButtonClick}
       >
-        ローカル
-      </Button>
-      <Button variant='outline' onClick={() => HandleButtonClick('ND')}>
-        ND
-      </Button>
-      <Button variant='outline' onClick={() => HandleButtonClick('TEST')}>
-        TEST
-      </Button>
-      <Button variant='outline' onClick={() => HandleButtonClick('本番')}>
-        本番
-      </Button>
-    </div>
+          ローカル
+        </Button>
+        <Button variant='outline' onClick={() => HandleButtonClick('ND')}>
+          ND
+        </Button>
+        <Button variant='outline' onClick={() => HandleButtonClick('TEST')}>
+          TEST
+        </Button>
+        <Button variant='outline' onClick={() => HandleButtonClick('本番')}>
+          本番
+        </Button>
+      </div>
   );
 } 

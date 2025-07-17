@@ -30,7 +30,7 @@ export default function Header({
   return (
     <div className='flex items-center justify-between mb-4'>
       <h1 className='text-lg font-semibold'>
-        {IsSettingsView ? '設定' : 'shobi-u'}
+        {IsSettingsView ? '設定' : 'Shobi-u'}
       </h1>
       <Button
         variant='ghost'
