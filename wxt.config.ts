@@ -9,6 +9,7 @@ export default defineConfig({
     plugins: [tailwindcss()],
   }),
   manifest: {
-    permissions: ['tabs', 'activeTab'],
+    permissions: ['tabs', 'activeTab', 'storage'],
+    host_permissions: ['<all_urls>'], // File System Access API用
   },
 });

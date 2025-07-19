@@ -1,6 +1,16 @@
 import { Button } from '@/components/ui/button';
 import { GetCurrentTabUrl } from '@/utils/chrome-tabs';
-import { useState } from 'react';
+import { useSettingsStore } from '@/stores/settingsStore';
+
+/**
+ * ShobiButtonsコンポーネントのProps
+ */
+interface ShobiButtonsProps {
+  /** 結果メッセージ更新用のコールバック */
+  OnResultUpdate: (message: string) => void;
+  /** ローカル環境URL未設定時のコールバック */
+  OnLocalUrlNotSet: () => void;
+}
 
 /**
  * Shobiシステム用ボタンコンポーネント
@@ -8,14 +18,17 @@ import { useState } from 'react';
  * @description
  * - 各環境（ローカル、ND、TEST、本番）へのアクセス用ボタンを提供
  * - 現在のタブのURLを取得し、環境別の処理を実行
- * - 共通のURL取得関数を使用してコードの重複を避ける
- * - 実行結果をリアルタイムで画面に表示
+ * - ローカル環境URLはローカルストレージから取得
+ * - 純粋なボタンコンポーネント（画面遷移の責務なし）
  *
  * @returns {JSX.Element} ボタングループのJSX要素
  */
-export default function ShobiButtons() {
-  // 実行結果をリアルタイム表示するためのstate
-  const [result, setResult] = useState<string>('ボタンをクリックしてください');
+export default function ShobiButtons({
+  OnResultUpdate,
+  OnLocalUrlNotSet,
+}: ShobiButtonsProps) {
+  // Zustandストアから設定値を取得
+  const { LocalUrl } = useSettingsStore();
 
   /**
    * URL取得後の共通処理を行うコールバック関数
@@ -42,17 +55,21 @@ export default function ShobiButtons() {
         BaseUrl = 'www.shobi-u.ac.jp/';
         break;
       case 'ローカル':
-        BaseUrl = 'localhost/'; // ローカル用（念のため）
+        // ローカルストレージから取得したURLを使用
+        BaseUrl = LocalUrl ? `${LocalUrl}/` : 'localhost/';
         break;
       default:
         BaseUrl = 'unknown/';
         break;
     }
 
+    // 末尾スラッシュの正規化
+    const NormalizedBaseUrl = BaseUrl.endsWith('/') ? BaseUrl : `${BaseUrl}/`;
+
     // 最終的な表示URL（プロトコル付き）
-    const DisplayUrl = BaseUrl + ProcessedUrlPart;
-    // NDの場合はHTTP、その他はHTTPSを使用
-    const Protocol = ButtonType === 'ND' ? 'http' : 'https';
+    const DisplayUrl = NormalizedBaseUrl + ProcessedUrlPart;
+    // NDの場合はHTTP、その他はHTTPSを使用（ローカルはHTTP）
+    const Protocol = ButtonType === 'ND' || ButtonType === 'ローカル' ? 'http' : 'https';
     const FullUrl = `${Protocol}://${DisplayUrl}`;
 
     // 新しいタブでURLを開く + クリップボードにコピー
@@ -63,7 +80,7 @@ export default function ShobiButtons() {
       // クリップボードにコピー
       navigator.clipboard.writeText(FullUrl);
 
-      setResult(
+      OnResultUpdate(
         `✅ 新しいタブで開きました & クリップボードにコピー: ${Protocol}://${DisplayUrl}`
       );
     } catch (CaughtError) {
@@ -71,8 +88,23 @@ export default function ShobiButtons() {
         '[HandleUrlProcessing] タブを開く・クリップボードコピー際にエラーが発生しました:',
         CaughtError
       );
-      setResult(`❌ 処理に失敗しました: ${Protocol}://${DisplayUrl}`);
+      OnResultUpdate(`❌ 処理に失敗しました: ${Protocol}://${DisplayUrl}`);
     }
+  };
+
+  /**
+   * ローカルボタンクリック時の特別な処理
+   */
+  const HandleLocalButtonClick = async (): Promise<void> => {
+    // ローカルURLが設定されているかチェック
+    if (!LocalUrl || LocalUrl.trim() === '') {
+      // 未設定の場合、上位コンポーネントに通知
+      OnLocalUrlNotSet();
+      return;
+    }
+
+    // 設定済みの場合、通常の処理を実行
+    await HandleButtonClick('ローカル');
   };
 
   /**
@@ -83,7 +115,7 @@ export default function ShobiButtons() {
   const HandleButtonClick = async (ButtonType: string): Promise<void> => {
     try {
       // 実行中の状態を表示
-      setResult('URL取得中...');
+      OnResultUpdate('URL取得中...');
 
       await GetCurrentTabUrl(HandleUrlProcessing, ButtonType);
     } catch (CaughtError) {
@@ -102,7 +134,7 @@ export default function ShobiButtons() {
 詳細はコンソールで確認してください
       `.trim();
 
-      setResult(ErrorResultMessage);
+      OnResultUpdate(ErrorResultMessage);
 
       // TODO: 本番実装時は、ユーザーに分かりやすいエラー表示を追加
       alert(
@@ -112,12 +144,11 @@ export default function ShobiButtons() {
   };
 
   return (
-    <>
-      <div className='grid grid-cols-2 gap-2 mt-2'>
+    <div className='grid grid-cols-2 gap-2 mt-2'>
         <Button
-          variant='outline'
-          disabled
-          onClick={() => HandleButtonClick('ローカル')}>
+        variant='outline'
+        onClick={HandleLocalButtonClick}
+      >
           ローカル
         </Button>
         <Button variant='outline' onClick={() => HandleButtonClick('ND')}>
@@ -130,11 +161,5 @@ export default function ShobiButtons() {
           本番
         </Button>
       </div>
-      <div className='mt-4 p-3 bg-gray-50 border rounded-md'>
-        <pre className='text-xs whitespace-pre-wrap font-mono text-gray-700'>
-          {result}
-        </pre>
-      </div>
-    </>
   );
-}
+} 
